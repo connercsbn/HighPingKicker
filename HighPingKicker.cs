@@ -15,7 +15,7 @@ namespace HighPingKicker;
 public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConfig>
 {
     public override string ModuleName => "High Ping Kicker";
-    public override string ModuleVersion => "0.0.1";
+    public override string ModuleVersion => "0.0.2";
     public override string ModuleAuthor => "conch";
     public override string ModuleDescription => "Kicks users with high ping";
 
@@ -28,7 +28,7 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
         public bool IsInGracePeriod { get; set; } = true;
         public bool IsAdmin { get; set; } = false;
         public int WarningsGiven { get; set; } = 0;
-        public bool IsImmune 
+        public bool IsImmune
         {
             get => this.IsAdmin || this.IsInGracePeriod;
         }
@@ -45,12 +45,20 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
 
     public override void Load(bool hotReload)
     {
+        if (hotReload)
+        {
+            Timer?.Kill();
+            Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false }).ToList().ForEach(Reset);
+        }
+
         Timer = new Timer(Config.CheckInterval, CheckPings, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
+
         RegisterListener<Listeners.OnMapStart>(OnMapStartHandler);
     }
 
     private void OnMapStartHandler(string mapName)
     {
+        Timer?.Kill();
         // server grace period start
         _ = new Timer(Config.GracePeriod, () =>
         {
@@ -68,7 +76,7 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
     {
         Reset(@event.Userid);
         return HookResult.Continue;
-    } 
+    }
 
     public void Reset(CCSPlayerController player)
     {
@@ -85,15 +93,16 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
         playerInfo.IsAdmin = (adminManager?.Groups.Count ?? 0) + (adminManager?.Flags.Count ?? 0) > 0;
     }
 
-    private void CheckPings() => Utilities.GetPlayers().ForEach(CheckPing);
+    private void CheckPings()
+    {
+        Utilities.GetPlayers()
+            .Where(p => p is { IsValid: true, IsBot: false })
+            .ToList()
+            .ForEach(CheckPing);
+    }
 
     private void CheckPing(CCSPlayerController player)
     {
-        if (player is not { IsValid: true, IsBot: false })
-        {
-            return;
-        }
-
         if (!Slots.TryGetValue(player.Slot, out var playerInfo))
         {
             if (player.Connected == PlayerConnectedState.PlayerConnected)
@@ -127,7 +136,6 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
                     .Replace("{PING}", player.Ping.ToString());
                 
                 Server.PrintToChatAll(kickMessage);
-                Logger.LogInformation("player {player} ({steamid}) has been kicked due to excessive ping after {warning} warnings.", player.PlayerName, player.SteamID, playerInfo.WarningsGiven);
             }
         } else
         { 
@@ -147,7 +155,7 @@ public class HighPingKickerConfig : BasePluginConfig
 { 
     [JsonPropertyName("max_ping")] public int MaxPing { get; set; } = 150;
     [JsonPropertyName("max_warnings")] public int MaxWarnings { get; set; } = 5;
-    [JsonPropertyName("check_interval")] public float CheckInterval { get; set; } = 20f;
+    [JsonPropertyName("check_interval")] public float CheckInterval { get; set; } = 20;
     [JsonPropertyName("show_warnings")] public bool ShowWarnings { get; set; } = true; 
     [JsonPropertyName("show_public_kick_message")] public bool ShowPublicKickMessage { get; set; } = true; 
     [JsonPropertyName("warning_message")] public string WarningMessage { get; set; } = "You will be kicked for excessive ping. You have {WARN} out of {MAXWARN} warnings.";
