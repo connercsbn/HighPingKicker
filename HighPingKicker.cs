@@ -15,7 +15,7 @@ namespace HighPingKicker;
 public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConfig>
 {
     public override string ModuleName => "High Ping Kicker";
-    public override string ModuleVersion => "0.0.2";
+    public override string ModuleVersion => "0.0.3";
     public override string ModuleAuthor => "conch";
     public override string ModuleDescription => "Kicks users with high ping";
 
@@ -23,7 +23,6 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
     public Dictionary<int, PlayerInfo> Slots = new();
     public class PlayerInfo
     {
-        public CCSPlayerController? Player { get; set; }
         public Timer? Timer { get; set; }
         public bool IsInGracePeriod { get; set; } = true;
         public bool IsAdmin { get; set; } = false;
@@ -34,10 +33,6 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
         }
     }
 
-    Timer? Timer;
-
-
-
     public void OnConfigParsed(HighPingKickerConfig config)
     {
         Config = config;
@@ -45,30 +40,32 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
 
     public override void Load(bool hotReload)
     {
-        if (hotReload)
-        {
-            Timer?.Kill();
-            Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false }).ToList().ForEach(Reset);
-        }
+        if (hotReload) GetPlayers().ForEach(Reset);
 
-        Timer = new Timer(Config.CheckInterval, CheckPings, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
+        AddTimer(Config.CheckInterval, CheckPings, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
 
         RegisterListener<Listeners.OnMapStart>(OnMapStartHandler);
+    }
+    private List<CCSPlayerController> GetPlayers()
+    {
+        return Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false, Connected: PlayerConnectedState.PlayerConnected }).ToList();
     }
 
     private void OnMapStartHandler(string mapName)
     {
-        Timer?.Kill();
         // server grace period start
-        _ = new Timer(Config.GracePeriod, () =>
+        AddTimer(Config.GracePeriod, () =>
         {
             // server grace period end
-            Timer = new Timer(Config.CheckInterval, CheckPings, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
+            AddTimer(Config.CheckInterval, CheckPings, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
         });
     }
     public override void Unload(bool hotReload)
     {
-        Timer?.Kill();
+        foreach (var slot in Slots)
+        {
+            slot.Value?.Timer?.Kill();
+        }
     }
 
     [GameEventHandler]
@@ -95,19 +92,33 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
 
     private void CheckPings()
     {
-        Utilities.GetPlayers()
-            .Where(p => p is { IsValid: true, IsBot: false })
-            .ToList()
-            .ForEach(CheckPing);
+        if (Config.DevMode)
+        {
+            Logger.LogInformation("-------------------------------");
+            Logger.LogInformation("Checking player's pings");
+            Logger.LogInformation("-------------------------------");
+        }
+        GetPlayers().ForEach(CheckPing);
+        if (Config.DevMode)
+        { 
+            Logger.LogInformation("-------------------------------");
+        }
     }
 
     private void CheckPing(CCSPlayerController player)
-    {
+    { 
+        if (Config.DevMode)
+            Logger.LogInformation("Name: {name}, Ping: {ping}, SteamID: {steamid}, Slot: {slot}", player.PlayerName, player.Ping, player.SteamID, player.Slot);
         if (!Slots.TryGetValue(player.Slot, out var playerInfo))
         {
-            if (player.Connected == PlayerConnectedState.PlayerConnected)
+            Logger.LogError("Player {player} ({steamid}) PlayerInfo slot not found.", player.PlayerName, player.SteamID);
+            if (Config.DevMode)
             {
-                Logger.LogError("Player {player}'s PlayerInfo slot not found.", player.PlayerName);
+                Logger.LogInformation("Existing PlayerInfo slots...");
+                foreach (var slot in Slots)
+                {
+                    Logger.LogInformation("      {slot}. ", slot.Key);
+                }
             }
             return;
         }
@@ -161,4 +172,5 @@ public class HighPingKickerConfig : BasePluginConfig
     [JsonPropertyName("warning_message")] public string WarningMessage { get; set; } = "You will be kicked for excessive ping. You have {WARN} out of {MAXWARN} warnings.";
     [JsonPropertyName("kick_message")] public string KickMessage { get; set; } = "{NAME} has been kicked due to excessive ping.";
     [JsonPropertyName("grace_period_seconds")] public float GracePeriod { get; set; } = 90;
+    [JsonPropertyName("dev")] public bool DevMode { get; set; } = false;
 }
