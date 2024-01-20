@@ -19,7 +19,7 @@ When the plugin is first loaded, the following config will be generated in `coun
    "warning_message": "You will be kicked for excessive ping. You have {WARN} out of {MAXWARN} warnings.",
    "kick_message": "{NAME} has been kicked due to excessive ping.",
    "grace_period_seconds": 90,
-   "dev": false
+   "dev": false // enables additional logging
    "ConfigVersion": 2,
 }
 </pre>
