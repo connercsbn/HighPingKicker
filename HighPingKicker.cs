@@ -15,7 +15,7 @@ namespace HighPingKicker;
 public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConfig>
 {
     public override string ModuleName => "High Ping Kicker";
-    public override string ModuleVersion => "0.0.3";
+    public override string ModuleVersion => "0.0.4";
     public override string ModuleAuthor => "conch";
     public override string ModuleDescription => "Kicks users with high ping";
 
@@ -48,7 +48,12 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
     }
     private List<CCSPlayerController> GetPlayers()
     {
-        return Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false, Connected: PlayerConnectedState.PlayerConnected }).ToList();
+        return Utilities.GetPlayers().FindAll(p => p is { 
+            IsValid: true, 
+            IsBot: false, 
+            IsHLTV: false, 
+            Connected: PlayerConnectedState.PlayerConnected 
+        });
     }
 
     private void OnMapStartHandler(string mapName)
@@ -111,9 +116,9 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
             Logger.LogInformation("Name: {name}, Ping: {ping}, SteamID: {steamid}, Slot: {slot}", player.PlayerName, player.Ping, player.SteamID, player.Slot);
         if (!Slots.TryGetValue(player.Slot, out var playerInfo))
         {
-            Logger.LogError("Player {player} ({steamid}) PlayerInfo slot not found.", player.PlayerName, player.SteamID);
             if (Config.DevMode)
             {
+                Logger.LogError("Player {player} ({steamid}) PlayerInfo slot not found.", player.PlayerName, player.SteamID);
                 Logger.LogInformation("Existing PlayerInfo slots...");
                 foreach (var slot in Slots)
                 {
