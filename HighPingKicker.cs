@@ -15,7 +15,7 @@ namespace HighPingKicker;
 public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConfig>
 {
     public override string ModuleName => "High Ping Kicker";
-    public override string ModuleVersion => "0.0.4";
+    public override string ModuleVersion => "0.0.5";
     public override string ModuleAuthor => "conch";
     public override string ModuleDescription => "Kicks users with high ping";
 
@@ -114,6 +114,7 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
     { 
         if (Config.DevMode)
             Logger.LogInformation("Name: {name}, Ping: {ping}, SteamID: {steamid}, Slot: {slot}", player.PlayerName, player.Ping, player.SteamID, player.Slot);
+
         if (!Slots.TryGetValue(player.Slot, out var playerInfo))
         {
             if (Config.DevMode)
@@ -137,6 +138,7 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
             HandleExcessivePing(player, playerInfo);
 
     }
+    
     public void HandleExcessivePing(CCSPlayerController player, PlayerInfo playerInfo)
     { 
         playerInfo.WarningsGiven++; 
@@ -145,28 +147,30 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
             Server.ExecuteCommand($"kickid {player.UserId}");
             if (Config.ShowPublicKickMessage)
             {
-                var kickMessage = Config.KickMessage
-                    .Replace("{NAME}", player.PlayerName)
-                    .Replace("{WARN}", playerInfo.WarningsGiven.ToString())
-                    .Replace("{MAXWARN}", Config.MaxWarnings.ToString())
-                    .Replace("{PING}", player.Ping.ToString());
-                
+                var kickMessage = ParseMessageTemplate(player, playerInfo, Config.KickMessage); 
                 Server.PrintToChatAll(kickMessage);
             }
         } else
         { 
             if (Config.ShowWarnings)
-            { 
-                var warningMessage = Config.WarningMessage
-                    .Replace("{WARN}", playerInfo.WarningsGiven.ToString())
-                    .Replace("{MAXWARN}", Config.MaxWarnings.ToString())
-                    .Replace("{PING}", player.Ping.ToString());
-
+            {
+                var warningMessage = ParseMessageTemplate(player, playerInfo, Config.WarningMessage);
                 player.PrintToChat(warningMessage);
             }
         }
     }
+
+    public string ParseMessageTemplate(CCSPlayerController player, PlayerInfo playerInfo,  string message)
+    {
+        return message
+            .Replace("{NAME}", player.PlayerName)
+            .Replace("{WARN}", playerInfo.WarningsGiven.ToString())
+            .Replace("{MAXWARN}", Config.MaxWarnings.ToString())
+            .Replace("{PING}", player.Ping.ToString())
+            .Replace("{MAXPING}", Config.MaxPing.ToString());
+    }
 }
+
 public class HighPingKickerConfig : BasePluginConfig
 { 
     [JsonPropertyName("max_ping")] public int MaxPing { get; set; } = 150;
