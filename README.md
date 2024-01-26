@@ -9,7 +9,7 @@ Inspired by SourceMod plugins [Very Basic High Ping Kicker](https://forums.allie
 ### Config
 When the plugin is first loaded, the following config will be generated in `counterstrikesharp/configs/plugins/HighPingKicker/HighPingKicker.json`
 
-<pre>
+```js
 {
    "max_ping": 150,
    "max_warnings": 5,
@@ -22,11 +22,18 @@ When the plugin is first loaded, the following config will be generated in `coun
    "dev": false  // enables additional logging
    "ConfigVersion": 2,
 }
-</pre>
+```
 
 ### Configurable messages
 
-| Message  | Default | Variables you can use |
-| ------------- | ------------- | ------- |
-| Warning message  | You will be kicked for excessive ping. You have {WARN} out of {MAXWARN} warnings.  | {WARN}, {MAXWARN}, {PING}
-| Kick message  | {NAME} has been kicked due to excessive ping.  | {WARN}, {MAXWARN}, {PING}, {NAME}
+| Message type     | Broadcast to         |    Default                                                                            |
+| ---------------- | ------------         | -------------                                                                         | 
+| Warning message  | The player being warned  | You will be kicked for excessive ping. You have {WARN} out of {MAXWARN} warnings.     | 
+| Kick message     | Everyone             | {NAME} has been kicked due to excessive ping.                                         |
+
+#### Available message variables
+ - {NAME}
+ - {WARN}
+ - {MAXWARN}
+ - {PING}
+ - {MAXPING}
