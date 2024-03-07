@@ -10,12 +10,12 @@ using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
 using CounterStrikeSharp.API;
 
 namespace HighPingKicker;
-[MinimumApiVersion(141)]
+[MinimumApiVersion(189)]
 
 public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConfig>
 {
     public override string ModuleName => "High Ping Kicker";
-    public override string ModuleVersion => "0.0.5";
+    public override string ModuleVersion => "0.0.6";
     public override string ModuleAuthor => "conch";
     public override string ModuleDescription => "Kicks users with high ping";
 
@@ -92,7 +92,7 @@ public class HighPingKickerPlugin : BasePlugin, IPluginConfig<HighPingKickerConf
         playerInfo.Timer?.Kill();
         playerInfo.Timer = new Timer(Config.GracePeriod, () => playerInfo.IsInGracePeriod = false);
         var adminManager = AdminManager.GetPlayerAdminData(new SteamID(player.SteamID));
-        playerInfo.IsAdmin = (adminManager?.Groups.Count ?? 0) + (adminManager?.Flags.Count ?? 0) > 0;
+        playerInfo.IsAdmin = (adminManager?.Groups.Count ?? 0) + (adminManager?.Flags.Count ?? 0) + AdminManager.GetPlayerImmunity(player) > 0;
     }
 
     private void CheckPings()
